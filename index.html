@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Experience Wave — Health Check</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --black: #0a0a0a;
+    --white: #fafafa;
+    --gray: #888;
+    --light-gray: #e0e0e0;
+    --mid-gray: #c0c0c0;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--white);
+    color: var(--black);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* --- Layout --- */
+  .screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .screen.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+    z-index: 10;
+  }
+
+  .screen.exit {
+    opacity: 0;
+    transform: translateY(-30px);
+    pointer-events: none;
+  }
+
+  .content {
+    max-width: 640px;
+    width: 100%;
+  }
+
+  /* --- Intro Screen --- */
+  .intro-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gray);
+    margin-bottom: 2rem;
+  }
+
+  .intro-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    line-height: 1.15;
+    margin-bottom: 1.5rem;
+    font-weight: 400;
+  }
+
+  .intro-sub {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: #444;
+    margin-bottom: 3rem;
+    max-width: 520px;
+  }
+
+  .btn {
+    display: inline-block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 1rem 2.5rem;
+    border: 2px solid var(--black);
+    background: var(--black);
+    color: var(--white);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .btn:hover {
+    background: transparent;
+    color: var(--black);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--black);
+  }
+
+  .btn-outline:hover {
+    background: var(--black);
+    color: var(--white);
+  }
+
+  /* --- Progress --- */
+  .progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: var(--black);
+    transition: width 0.5s ease;
+    z-index: 100;
+  }
+
+  .question-count {
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gray);
+    margin-bottom: 2.5rem;
+  }
+
+  /* --- Questions --- */
+  .question-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    line-height: 1.3;
+    margin-bottom: 2.5rem;
+    font-weight: 400;
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.2rem 0;
+    border-bottom: 1px solid var(--light-gray);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+  }
+
+  .option:first-child {
+    border-top: 1px solid var(--light-gray);
+  }
+
+  .option:hover {
+    padding-left: 0.5rem;
+  }
+
+  .option:hover .option-letter {
+    background: var(--black);
+    color: var(--white);
+  }
+
+  .option.selected {
+    padding-left: 0.5rem;
+  }
+
+  .option.selected .option-letter {
+    background: var(--black);
+    color: var(--white);
+  }
+
+  .option-letter {
+    width: 2rem;
+    height: 2rem;
+    border: 1.5px solid var(--black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    transition: all 0.25s ease;
+  }
+
+  .option-text {
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #333;
+  }
+
+  /* --- Contact Form --- */
+  .form-intro {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: #444;
+    margin-bottom: 2.5rem;
+    max-width: 520px;
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gray);
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .form-input {
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    padding: 0.8rem 0;
+    border: none;
+    border-bottom: 1.5px solid var(--light-gray);
+    background: transparent;
+    color: var(--black);
+    outline: none;
+    transition: border-color 0.3s ease;
+  }
+
+  .form-input:focus {
+    border-color: var(--black);
+  }
+
+  .form-input::placeholder {
+    color: var(--mid-gray);
+  }
+
+  .form-note {
+    font-size: 0.78rem;
+    color: var(--gray);
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+
+  .form-error {
+    font-size: 0.78rem;
+    color: #c00;
+    margin-top: 0.3rem;
+    display: none;
+  }
+
+  /* --- Result Screen --- */
+  .result-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gray);
+    margin-bottom: 2rem;
+  }
+
+  .result-headline {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.8rem, 4.5vw, 2.8rem);
+    line-height: 1.2;
+    margin-bottom: 1.5rem;
+    font-weight: 400;
+  }
+
+  .result-body {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: #444;
+    margin-bottom: 2rem;
+    max-width: 540px;
+  }
+
+  .result-insight {
+    border-left: 3px solid var(--black);
+    padding: 1.2rem 1.5rem;
+    margin: 2rem 0 2.5rem;
+    background: #f5f5f5;
+  }
+
+  .result-insight p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #333;
+  }
+
+  .result-cta {
+    font-size: 1rem;
+    color: #444;
+    margin-bottom: 2rem;
+    line-height: 1.7;
+  }
+
+  .result-email {
+    font-weight: 600;
+    color: var(--black);
+    text-decoration: none;
+    border-bottom: 1.5px solid var(--black);
+    padding-bottom: 2px;
+    transition: opacity 0.3s ease;
+  }
+
+  .result-email:hover {
+    opacity: 0.6;
+  }
+
+  /* --- Wave visualization --- */
+  .wave-vis {
+    display: flex;
+    gap: 2rem;
+    margin: 2rem 0 2.5rem;
+    align-items: flex-end;
+  }
+
+  .wave-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+  }
+
+  .wave-bar-fill {
+    width: 100%;
+    background: var(--black);
+    transition: height 0.8s ease;
+    min-height: 4px;
+  }
+
+  .wave-bar-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gray);
+    text-align: center;
+  }
+
+  /* --- Footer --- */
+  .footer {
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem;
+    right: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  .footer-brand {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mid-gray);
+  }
+
+  .footer-nav {
+    display: flex;
+    gap: 0.5rem;
+    pointer-events: all;
+  }
+
+  .nav-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1.5px solid var(--light-gray);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    color: var(--gray);
+    font-size: 1rem;
+  }
+
+  .nav-btn:hover {
+    border-color: var(--black);
+    color: var(--black);
+  }
+
+  .nav-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  /* --- Keyboard hint --- */
+  .key-hint {
+    font-size: 0.72rem;
+    color: var(--mid-gray);
+    margin-top: 2rem;
+  }
+
+  .key-hint kbd {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--light-gray);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.68rem;
+    margin: 0 0.1rem;
+  }
+
+  /* --- Mobile --- */
+  @media (max-width: 600px) {
+    .screen { padding: 1.5rem; }
+    .footer { bottom: 1rem; left: 1.5rem; right: 1.5rem; }
+    .wave-vis { gap: 1rem; }
+    .option { padding: 1rem 0; }
+    .option:hover { padding-left: 0; }
+  }
+
+  /* --- Fade utility --- */
+  .fade-in-up {
+    opacity: 0;
+    transform: translateY(15px);
+    animation: fadeInUp 0.5s ease forwards;
+  }
+
+  @keyframes fadeInUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+  .delay-5 { animation-delay: 0.5s; }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progress" style="width: 0%"></div>
+
+<!-- ===== INTRO ===== -->
+<div class="screen active" id="screen-intro">
+  <div class="content">
+    <div class="intro-label fade-in-up">Experience Wave</div>
+    <h1 class="intro-title fade-in-up delay-1">Are you riding the wave<br>— or making ripples?</h1>
+    <p class="intro-sub fade-in-up delay-2">Three questions. Ninety seconds.<br>Find out where your brand promise, customer reality, and employee delivery are pulling apart.</p>
+    <button class="btn fade-in-up delay-3" onclick="startCheck()">Begin</button>
+    <div class="key-hint fade-in-up delay-4">or press <kbd>Enter</kbd></div>
+  </div>
+</div>
+
+<!-- ===== QUESTION 1 ===== -->
+<div class="screen" id="screen-q1">
+  <div class="content">
+    <div class="question-count">Question 1 of 3</div>
+    <h2 class="question-text">If your best customer described your company to a friend, and your newest employee described it to theirs — would they tell the same story?</h2>
+    <div class="options">
+      <div class="option" onclick="selectOption(1, 'a')" data-q="1" data-v="a">
+        <div class="option-letter">A</div>
+        <div class="option-text">Yes, same story</div>
+      </div>
+      <div class="option" onclick="selectOption(1, 'b')" data-q="1" data-v="b">
+        <div class="option-letter">B</div>
+        <div class="option-text">Close, but not quite</div>
+      </div>
+      <div class="option" onclick="selectOption(1, 'c')" data-q="1" data-v="c">
+        <div class="option-letter">C</div>
+        <div class="option-text">Probably very different stories</div>
+      </div>
+      <div class="option" onclick="selectOption(1, 'd')" data-q="1" data-v="d">
+        <div class="option-letter">D</div>
+        <div class="option-text">I honestly don't know</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== QUESTION 2 ===== -->
+<div class="screen" id="screen-q2">
+  <div class="content">
+    <div class="question-count">Question 2 of 3</div>
+    <h2 class="question-text">If your customers spent one day inside your company, would they trust you more — or less?</h2>
+    <div class="options">
+      <div class="option" onclick="selectOption(2, 'a')" data-q="2" data-v="a">
+        <div class="option-letter">A</div>
+        <div class="option-text">More — we live what we promise</div>
+      </div>
+      <div class="option" onclick="selectOption(2, 'b')" data-q="2" data-v="b">
+        <div class="option-letter">B</div>
+        <div class="option-text">About the same</div>
+      </div>
+      <div class="option" onclick="selectOption(2, 'c')" data-q="2" data-v="c">
+        <div class="option-letter">C</div>
+        <div class="option-text">Probably less</div>
+      </div>
+      <div class="option" onclick="selectOption(2, 'd')" data-q="2" data-v="d">
+        <div class="option-letter">D</div>
+        <div class="option-text">I honestly don't know</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== QUESTION 3 ===== -->
+<div class="screen" id="screen-q3">
+  <div class="content">
+    <div class="question-count">Question 3 of 3</div>
+    <h2 class="question-text">Who in your company would notice first if customer experience got worse?</h2>
+    <div class="options">
+      <div class="option" onclick="selectOption(3, 'a')" data-q="3" data-v="a">
+        <div class="option-letter">A</div>
+        <div class="option-text">Leadership</div>
+      </div>
+      <div class="option" onclick="selectOption(3, 'b')" data-q="3" data-v="b">
+        <div class="option-letter">B</div>
+        <div class="option-text">Frontline employees</div>
+      </div>
+      <div class="option" onclick="selectOption(3, 'c')" data-q="3" data-v="c">
+        <div class="option-letter">C</div>
+        <div class="option-text">Customers themselves</div>
+      </div>
+      <div class="option" onclick="selectOption(3, 'd')" data-q="3" data-v="d">
+        <div class="option-letter">D</div>
+        <div class="option-text">No one, until the numbers drop</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CONTACT FORM ===== -->
+<div class="screen" id="screen-contact">
+  <div class="content">
+    <div class="question-count">Almost there</div>
+    <h2 class="question-text">Where should we send your result?</h2>
+    <p class="form-intro">Your diagnostic takes a moment to prepare. We'll show your result on the next screen — and send a copy to your inbox.</p>
+    <div class="form-group">
+      <label class="form-label" for="fname">First name</label>
+      <input class="form-input" type="text" id="fname" placeholder="Jane">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="email">Email</label>
+      <input class="form-input" type="email" id="email" placeholder="name@company.com">
+      <div class="form-error" id="email-error">Please enter a valid email address.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="company">Company</label>
+      <input class="form-input" type="text" id="company" placeholder="Acme Corp">
+    </div>
+    <div class="form-note">We collect this to personalise your diagnostic. No spam, no mailing lists.</div>
+    <button class="btn" onclick="submitContact()">See my result</button>
+  </div>
+</div>
+
+<!-- ===== RESULT ===== -->
+<div class="screen" id="screen-result">
+  <div class="content">
+    <div class="result-label">Your Experience Wave Diagnostic</div>
+    <h2 class="result-headline" id="result-headline"></h2>
+
+    <div class="wave-vis" id="wave-vis">
+      <div class="wave-bar">
+        <div class="wave-bar-fill" id="bar-brand" style="height: 0px"></div>
+        <div class="wave-bar-label">Brand</div>
+      </div>
+      <div class="wave-bar">
+        <div class="wave-bar-fill" id="bar-customer" style="height: 0px"></div>
+        <div class="wave-bar-label">Customer</div>
+      </div>
+      <div class="wave-bar">
+        <div class="wave-bar-fill" id="bar-employee" style="height: 0px"></div>
+        <div class="wave-bar-label">Employee</div>
+      </div>
+    </div>
+
+    <div class="result-insight" id="result-insight">
+      <p id="result-insight-text"></p>
+    </div>
+
+    <p class="result-body" id="result-body"></p>
+
+    <p class="result-cta">If this resonates, let's talk → <a class="result-email" href="mailto:dc@ohwow.one">dc@ohwow.one</a></p>
+  </div>
+</div>
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+  <div class="footer-brand">Experience Wave</div>
+</div>
+
+<script>
+  // --- State ---
+  const answers = {};
+  let currentScreen = 'intro';
+
+  // --- Screen transitions ---
+  function showScreen(id) {
+    const current = document.querySelector('.screen.active');
+    if (current) {
+      current.classList.remove('active');
+      current.classList.add('exit');
+      setTimeout(() => current.classList.remove('exit'), 600);
+    }
+    setTimeout(() => {
+      const next = document.getElementById('screen-' + id);
+      next.classList.add('active');
+      currentScreen = id;
+      updateProgress();
+    }, 150);
+  }
+
+  function updateProgress() {
+    const stages = { intro: 0, q1: 20, q2: 45, q3: 70, contact: 90, result: 100 };
+    document.getElementById('progress').style.width = (stages[currentScreen] || 0) + '%';
+  }
+
+  // --- Start ---
+  function startCheck() { showScreen('q1'); }
+
+  // --- Select option ---
+  function selectOption(q, v) {
+    answers[q] = v;
+
+    // Visual feedback
+    document.querySelectorAll(`[data-q="${q}"]`).forEach(el => el.classList.remove('selected'));
+    document.querySelector(`[data-q="${q}"][data-v="${v}"]`).classList.add('selected');
+
+    // Auto-advance after short delay
+    setTimeout(() => {
+      if (q < 3) showScreen('q' + (q + 1));
+      else showScreen('contact');
+    }, 400);
+  }
+
+  // --- Contact form ---
+  function submitContact() {
+    const email = document.getElementById('email').value.trim();
+    const fname = document.getElementById('fname').value.trim();
+    const company = document.getElementById('company').value.trim();
+
+    if (!email || !email.includes('@')) {
+      document.getElementById('email-error').style.display = 'block';
+      return;
+    }
+    document.getElementById('email-error').style.display = 'none';
+
+    // Map answers to readable text
+    const qTexts = {
+      1: 'Customer story vs Employee story — same?',
+      2: 'If customers spent a day inside, trust more or less?',
+      3: 'Who notices first if CX gets worse?'
+    };
+    const aTexts = {
+      1: { a: 'Yes, same story', b: 'Close, but not quite', c: 'Probably very different stories', d: "I honestly don't know" },
+      2: { a: 'More — we live what we promise', b: 'About the same', c: 'Probably less', d: "I honestly don't know" },
+      3: { a: 'Leadership', b: 'Frontline employees', c: 'Customers themselves', d: 'No one, until the numbers drop' }
+    };
+
+    let answersText = '';
+    for (let i = 1; i <= 3; i++) {
+      answersText += `Q${i}: ${qTexts[i]}\nAnswer: ${aTexts[i][answers[i]] || 'N/A'}\n\n`;
+    }
+
+    // Send to Web3Forms
+    const formData = {
+      access_key: 'e655586c-be92-477f-ac3b-8a93e7de3275',
+      subject: 'New Experience Wave Health Check — ' + (fname || 'Anonymous'),
+      from_name: 'Experience Wave Health Check',
+      name: fname,
+      email: email,
+      company: company,
+      answers: answersText,
+      timestamp: new Date().toISOString()
+    };
+
+    fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    }).then(res => res.json()).then(data => {
+      console.log('Lead sent:', data);
+    }).catch(err => {
+      console.log('Lead send failed, storing locally:', err);
+    });
+
+    // Show result immediately (don't wait for email to send)
+    generateResult();
+    showScreen('result');
+  }
+
+  // --- Diagnostic engine ---
+  function generateResult() {
+    const a = answers;
+
+    // Scoring: map answers to pillar signals
+    // Q1 (Brand ↔ Employee alignment): a=strong, b=partial, c=broken, d=blind
+    // Q2 (Brand ↔ Customer gap): a=strong, b=neutral, c=broken, d=blind
+    // Q3 (Customer ↔ Employee awareness): a=leadership-driven, b=employee-aware, c=customer-bears-it, d=nobody
+
+    const scores = { brand: 0, customer: 0, employee: 0 };
+
+    // Q1 scoring
+    if (a[1] === 'a') { scores.brand += 3; scores.employee += 3; }
+    else if (a[1] === 'b') { scores.brand += 2; scores.employee += 1; }
+    else if (a[1] === 'c') { scores.brand += 1; scores.employee += 0; }
+    else { scores.brand += 0; scores.employee += 0; }
+
+    // Q2 scoring
+    if (a[2] === 'a') { scores.brand += 3; scores.customer += 3; scores.employee += 2; }
+    else if (a[2] === 'b') { scores.brand += 2; scores.customer += 2; scores.employee += 1; }
+    else if (a[2] === 'c') { scores.brand += 1; scores.customer += 0; scores.employee += 0; }
+    else { scores.brand += 0; scores.customer += 0; scores.employee += 0; }
+
+    // Q3 scoring
+    if (a[3] === 'a') { scores.customer += 3; scores.employee += 2; }
+    else if (a[3] === 'b') { scores.employee += 3; scores.customer += 1; }
+    else if (a[3] === 'c') { scores.customer += 0; scores.employee += 0; }
+    else { scores.customer += 0; scores.employee += 0; }
+
+    // Normalize to max height (120px)
+    const max = Math.max(scores.brand, scores.customer, scores.employee, 1);
+    const normalize = (v) => Math.max(8, (v / 6) * 120);
+
+    setTimeout(() => {
+      document.getElementById('bar-brand').style.height = normalize(scores.brand) + 'px';
+      document.getElementById('bar-customer').style.height = normalize(scores.customer) + 'px';
+      document.getElementById('bar-employee').style.height = normalize(scores.employee) + 'px';
+    }, 300);
+
+    // Determine result type
+    const total = scores.brand + scores.customer + scores.employee;
+    const allD = a[1] === 'd' && a[2] === 'd' && a[3] === 'd';
+    const hasC = Object.values(a).includes('c');
+    const hasD = Object.values(a).includes('d');
+
+    const fname = document.getElementById('fname').value.trim();
+    const greeting = fname ? fname + ', ' : '';
+
+    let headline, insight, body;
+
+    if (total >= 14) {
+      headline = 'Your waves are moving together.';
+      insight = 'Your brand, customer, and employee experiences appear aligned. That\'s rare. The question isn\'t whether you\'re good — it\'s whether your alignment is intentional or accidental. Accidental alignment breaks under growth.';
+      body = greeting + 'companies at this level don\'t need convincing — they need a stress test. When you scale, hire fast, or enter new markets, will the alignment hold?';
+    }
+    else if (total >= 8) {
+      headline = 'Your waves are drifting apart.';
+      insight = 'There\'s intent, but the three experiences aren\'t reinforcing each other. What your brand promises, what your customers feel, and what your employees deliver are starting to tell different stories.';
+      body = greeting + 'this is where most mid-market companies sit. The gaps aren\'t catastrophic yet, but they compound. The longer the drift, the harder the correction.';
+    }
+    else if (allD || (hasD && total < 5)) {
+      headline = 'You can\'t see your waves.';
+      insight = 'The biggest risk isn\'t misalignment — it\'s not knowing where your brand, customer, and employee experiences actually stand. You can\'t fix what you can\'t see.';
+      body = greeting + 'this isn\'t a criticism. Most companies operate with blind spots across all three pillars. The first step is simply making the invisible visible.';
+    }
+    else {
+      headline = 'Your waves are pulling in different directions.';
+      insight = 'Your brand is saying one thing, your customers are experiencing another, and your employees are delivering something else entirely. The energy is scattering — nothing compounds, nothing lasts.';
+      body = greeting + 'this is exactly what the Experience Wave framework is designed to diagnose and fix. Three waves, one direction.';
+    }
+
+    document.getElementById('result-headline').textContent = headline;
+    document.getElementById('result-insight-text').textContent = insight;
+    document.getElementById('result-body').textContent = body;
+  }
+
+  // --- Keyboard navigation ---
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (currentScreen === 'intro') startCheck();
+      else if (currentScreen === 'contact') submitContact();
+    }
+
+    // A/B/C/D keys for questions
+    if (['q1', 'q2', 'q3'].includes(currentScreen)) {
+      const qNum = parseInt(currentScreen.replace('q', ''));
+      const keyMap = { a: 'a', b: 'b', c: 'c', d: 'd' };
+      if (keyMap[e.key.toLowerCase()]) {
+        selectOption(qNum, keyMap[e.key.toLowerCase()]);
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
